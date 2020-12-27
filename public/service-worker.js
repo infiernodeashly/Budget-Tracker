@@ -1,4 +1,3 @@
-
 const PreCacheFiles = [
   "/",
   "/index.html",
@@ -13,10 +12,10 @@ const CACHE_NAME = "static-cache-v14";
 const DATA_CACHE_NAME = "data-cache-v13";
 
 // install
-self.addEventListener("install", function (event) {
-  event.waitUntil(
+self.addEventListener("install", function (evt) {
+  evt.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log("Your file have be pre-cached ");
+      console.log("Your files were pre-cached successfully!");
       return cache.addAll(PreCacheFiles);
     })
   );
@@ -25,13 +24,13 @@ self.addEventListener("install", function (event) {
 });
 
 // activate
-self.addEventListener("activate", function (event) {
-  event.waitUntil(
+self.addEventListener("activate", function (evt) {
+  evt.waitUntil(
     caches.keys().then(keyList => {
       return Promise.all(
         keyList.map(key => {
           if (key !== CACHE_NAME && key !== DATA_CACHE_NAME) {
-            console.log("Removing cached data", key);
+            console.log("Removing old cache data", key);
             return caches.delete(key);
           }
         })
@@ -43,32 +42,32 @@ self.addEventListener("activate", function (event) {
 });
 
 // fetch
-self.addEventListener("fetch", function (event) {
-  const { url } = event.request;
+self.addEventListener("fetch", function (evt) {
+  const { url } = evt.request;
   if (url.includes("/all") || url.includes("/find")) {
-    event.respondWith(
+    evt.respondWith(
       caches.open(DATA_CACHE_NAME).then(cache => {
-        return fetch(event.request)
+        return fetch(evt.request)
           .then(response => {
-            // If it works then it will clone and store the data in the cache.
+            // If the response was good, clone it and store it in the cache.
             if (response.status === 200) {
-              cache.put(event.request, response.clone());
+              cache.put(evt.request, response.clone());
             }
 
             return response;
           })
           .catch(err => {
-            // if network request fails try to pull from cache.
-            return cache.match(event.request);
+            // Network request failed, try to get it from the cache.
+            return cache.match(evt.request);
           });
       }).catch(err => console.log(err))
     );
   } else {
-    // respond from static cache
-    event.respondWith(
+    // respond from static cache, request is not for /api/*
+    evt.respondWith(
       caches.open(CACHE_NAME).then(cache => {
-        return cache.match(event.request).then(response => {
-          return response || fetch(event.request);
+        return cache.match(evt.request).then(response => {
+          return response || fetch(evt.request);
         });
       })
     );
